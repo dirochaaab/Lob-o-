@@ -124,6 +124,7 @@ input,select{background:#080706;border:1.5px solid #b88a2e;border-radius:12px;bo
       <div class="row"><span>Pago com o saldo</span><b id="paid"></b></div>
       <div class="row"><span>Recebido ao passar</span><b id="recv"></b></div>
       <div class="row"><span>Gastos</span><b id="spent"></b></div>
+      <div class="row"><span>Dinheiro adicionado</span><b id="addv"></b></div>
     </div>
     <button class="link" id="carry">Trazer saldo do mês anterior</button>
   </section>
@@ -162,6 +163,16 @@ input,select{background:#080706;border:1.5px solid #b88a2e;border-radius:12px;bo
       <input id="edesc" placeholder="Descrição" aria-label="Descrição do gasto">
       <input id="eval" inputmode="decimal" placeholder="0,00" style="width:110px" aria-label="Valor do gasto">
       <button class="primary" id="eadd">Adicionar gasto</button>
+    </div>
+  </section>
+
+  <h2>Dinheiro adicionado</h2>
+  <section class="slip">
+    <div id="adds"></div>
+    <div class="ex">
+      <input id="odesc" placeholder="De onde vem o dinheiro" aria-label="Origem do dinheiro">
+      <input id="oval" inputmode="decimal" placeholder="0,00" style="width:110px" aria-label="Valor adicionado">
+      <button class="primary" id="oadd">Adicionar dinheiro</button>
     </div>
   </section>
 
@@ -206,7 +217,8 @@ function calc(m){
     return {c,fee,disc,net,run,parc,next:r2((c.bill||0)+parc)};
   });
   const spent=r2(m.exps.reduce((a,e)=>a+e.v,0));
-  return {rows,recv,paid,spent,saldo:r2(run-spent)};
+  const add=r2((m.adds||[]).reduce((a,e)=>a+e.v,0));
+  return {rows,recv,paid,spent,add,saldo:r2(run-spent+add)};
 }
 
 function render(){
@@ -217,6 +229,7 @@ function render(){
   $('#paid').textContent='− '+fmt(c.paid);
   $('#recv').textContent='+ '+fmt(c.recv);
   $('#spent').textContent='− '+fmt(c.spent);
+  $('#addv').textContent='+ '+fmt(c.add);
   if(document.activeElement!==$('#start'))$('#start').value=m.start?String(m.start).replace('.',','):'';
 
   $('#cards').innerHTML=c.rows.map((r,i)=>{
@@ -237,6 +250,7 @@ function render(){
     <div class="row"><span>Saldo depois de cobrir</span><b class="${after<0?'neg':'pos'}">${fmt(after)}</b></div></div>`
     :'<p class="empty">Informe a fatura de cada cartão para ver o total do próximo mês.</p>';
 
+  $('#adds').innerHTML=(m.adds||[]).map((e,i)=>`<div class="crow" style="align-items:center"><div class="cbody" style="color:var(--ink)">${esc(e.d)}</div><b>+ ${fmt(e.v)}</b><button class="x" data-dela="${i}" aria-label="Remover entrada">✕</button></div>`).join('')||'<p class="empty">Nenhum dinheiro adicionado neste mês.</p>';
   $('#exps').innerHTML=m.exps.map((e,i)=>`<div class="crow" style="align-items:center"><div class="cbody" style="color:var(--ink)">${esc(e.d)}</div><b>− ${fmt(e.v)}</b><button class="x" data-delx="${i}" aria-label="Remover gasto">✕</button></div>`).join('')||'<p class="empty">Nenhum gasto neste mês.</p>';
 }
 
@@ -281,6 +295,14 @@ $('#eadd').onclick=()=>{
   $('#edesc').value='';$('#eval').value='';save();render();
 };
 $('#exps').onclick=e=>{const b=e.target.closest('[data-delx]');if(b){get(key(y,mo)).exps.splice(+b.dataset.delx,1);save();render()}};
+
+$('#oadd').onclick=()=>{
+  const v=num($('#oval').value);
+  if(v<=0){$('#oval').focus();return}
+  const m=get(key(y,mo));(m.adds=m.adds||[]).push({d:$('#odesc').value.trim()||'Dinheiro adicionado',v});
+  $('#odesc').value='';$('#oval').value='';save();render();
+};
+$('#adds').onclick=e=>{const b=e.target.closest('[data-dela]');if(b){get(key(y,mo)).adds.splice(+b.dataset.dela,1);save();render()}};
 
 sel();render();
 </script>
